@@ -18,6 +18,7 @@
 
 #import <objc/runtime.h>
 #import <assert.h>
+#import <libkern/OSAtomic.h>
 
 typedef enum {
   SOCArgumentTypeNone,
@@ -54,7 +55,32 @@ NSString* kTemporaryBackslashToken = @"/backslash/";
   return self;
 }
 
+#define kMaxPatternCacheSize 150
 + (id)patternWithString:(NSString *)string {
+  static OSSpinLock spinlock = OS_SPINLOCK_INIT;
+  static NSMutableDictionary *patternCache = nil;
+    
+  static dispatch_once_t onceToken;
+  dispatch_once(&onceToken, ^{
+    patternCache = [[NSMutableDictionary alloc] init];
+  });
+    
+  OSSpinLockLock(&spinlock);
+  id result = [patternCache objectForKey:string];
+  OSSpinLockUnlock(&spinlock);
+
+  if (result == nil) {
+    result = [[self alloc] initWithString:string];
+    OSSpinLockLock(&spinlock);
+    [patternCache setValue:result forKey:string];
+    // if we exceed cache size, then just nuke all
+    // of the pattern cache data and start over
+    // as of July 6 2015, Robinhood app is at around 30 enties in this cache
+    if (patternCache.count > kMaxPatternCacheSize) {
+      [patternCache removeAllObjects];
+    }
+    OSSpinLockUnlock(&spinlock);
+  }
   return [[self alloc] initWithString:string];
 }
 
