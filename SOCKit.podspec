@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
     s.name     = 'SOCKit'
-    s.version  = '1.2.1'
+    s.version  = '1.2.2'
     s.license  = 'Apache 2.0'
     s.summary  = 'String <-> Object Coder for Objective-C.'
     s.homepage = 'https://github.com/robinhoodmarkets/sockit'
